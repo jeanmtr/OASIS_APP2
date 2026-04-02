@@ -23,4 +23,4 @@ Potentiellement en fonction des harmoniques on peut aussi distinguer le type d'i
 
 ## 3. Pré/Post processing:
 
-Il faudra suement traiter le signal en amont, utiliser du fenétrage etc mais on verra en suite.
+Il faudra suement traiter le signal en amont, utiliser du fenétrage etc mais on verra en suite
