@@ -1,3 +1,11 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import soundfile as sf
+from scipy.signal import find_peaks
+
+
+
 ref_notes=frequences = [
     # octave -1
     [16.35, "do-1"], [17.33, "do#-1"], [18.36, "ré-1"], [19.45, "ré#-1"],
@@ -45,6 +53,17 @@ ref_notes=frequences = [
     [26579.52, "sol#9"], [28160.00, "la9"], [29834.48, "la#9"], [31608.52, "si9"],
 ]
 
+
+def extract(array,n):
+    """la fonction renvoie une liste de tableau numpy, chaque tableau (symbole) correspondant à un enregistrement de n échantillons"""
+    L=[]
+    d=0
+    while(len(array)-d>0):#il reste encore des symboles à analyser dans le tableau
+        L.append(array[d:d+n])
+        d+=n
+    return L
+
+
 def trouver_note(freq):
     global ref_notes
     i=0
@@ -56,4 +75,78 @@ def trouver_note(freq):
         return ref_notes[i+1][1]
 
 
-print(trouver_note(15684))
+def find_indice_max(array):
+    max=array[0]
+    indice_max=0
+    for indice in range(1,len(array)):
+        if array[indice]>max:
+            max=array[indice]
+            indice_max=indice
+    return indice_max
+    
+
+def analyse_échantillon(array,Fe):
+    transformee=np.fft.fft(array)
+    frequences=np.arange(0,Fe,Fe/(len(array)))
+    """plt.close()
+    plt.plot(frequences,abs(transformee))
+    plt.title("transformée de l'échantillon du signal")
+    plt.xlabel("frequence (Hz)")
+    plt.ylabel("abs(amplitude)*len(array)")
+    plt.show()"""
+
+    #détermination du pic maximal
+    demie_transformee_abs=abs(transformee[:len(transformee)//2])
+
+    #analyse du symbole
+    indice_max=find_indice_max(demie_transformee_abs)
+    frequence=frequences[indice_max]
+    print("frequence trouvee ", frequence)
+    return frequence
+
+
+
+def main(file_name,nbr_échantillons):
+    try:
+        x, Fe = sf.read(file_name)
+        print("fréquence d'échantillonage : ",Fe)
+        #récupérer que le premier coeff de chaque sous-tableau de x
+        x=[x[i][0] for i in range(len(x))]
+        #calculer le nombre de points par échantillon
+        n=int(len(x)/nbr_échantillons+0.5)
+        #tracer le signal d'origine
+        t=np.linspace(0,len(x)/Fe,len(x))
+        plt.close()
+        plt.title("signal temporel d'origine non échantilloné")
+        plt.plot(t,x)
+        plt.xlabel("temps (s)")
+        plt.ylabel("amplitude")
+        plt.show()        
+
+        #découper le signal en échantillons
+        L=extract(x,n)#liste de tableaux numpy d'échantillons
+        
+        #analyser chaque échantillon 
+        resultat=[]
+        for elt in L:
+            t=np.linspace(0,n/Fe,n)
+            """plt.close()
+            plt.title("échantillon de signal temporel d'origine")
+            plt.plot(t,elt)
+            plt.xlabel("temps (s)")
+            plt.ylabel("amplitude")
+            plt.show()"""
+            freq=analyse_échantillon(elt,Fe)
+            note=trouver_note(freq)
+            print("note : ", note)
+            resultat.append(note)
+            """reponse=input("suivant ? (y/n) ")
+            if reponse=="n":
+                return"""
+        print("résultat : ",resultat)
+    except:
+        raise SystemError("vérifier le nom du fichier, sinon c'est une erreur dans le decodeur")
+
+os.read
+nbr_échantillons=20
+main('gamme_guitare_reel_do_majeur.wav',nbr_échantillons)
