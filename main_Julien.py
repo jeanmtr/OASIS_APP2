@@ -1,10 +1,11 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy as sp
 import soundfile as sf
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks,hilbert
 
-
+SAMPLE_RATE = 44100
 
 ref_notes=frequences = [
     # octave -1
@@ -87,6 +88,7 @@ def find_indice_max(array):
 
 def analyse_échantillon(array,Fe):
     transformee=np.fft.fft(array)
+    #transformee=np.imag(hilbert(np.real(transformee)))#on prend la partie imaginaire de la transformee de hilbert de transformee
     frequences=np.arange(0,Fe,Fe/(len(array)))
     """plt.close()
     plt.plot(frequences,abs(transformee))
@@ -108,7 +110,8 @@ def analyse_échantillon(array,Fe):
 
 def main(file_name,nbr_échantillons):
     try:
-        x, Fe = sf.read(file_name)
+        x, Fe = sf.read(f"sons/{file_name}")
+        #x=x[::,0] #on se met en mono (=pareil oreille gauche/droite) ATTENTION si le son est mono cette ligne cause une erreur !!!!
         print("fréquence d'échantillonage : ",Fe)
         #récupérer que le premier coeff de chaque sous-tableau de x
         x=[x[i][0] for i in range(len(x))]
