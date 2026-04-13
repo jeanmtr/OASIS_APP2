@@ -1,0 +1,7 @@
+difficultés :
+- lecture d'un segment compliquée
+
+notions de cours :
+
+remarques : 
+- si implémente filtre : privilégier filtres avec pôles et leurs conjugués pour avoir RI réelle

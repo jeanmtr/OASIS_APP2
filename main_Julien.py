@@ -6,7 +6,7 @@ import soundfile as sf
 from scipy.signal import find_peaks,hilbert
 
 SAMPLE_RATE = 44100
-NOM_FICHIER='gamme_guitare_reel_do_majeur.wav'
+NOM_FICHIER='Piano_accord.wav'
 
 ref_notes=frequences = [
     # octave -1
