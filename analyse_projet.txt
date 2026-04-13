@@ -5,3 +5,8 @@ notions de cours :
 
 remarques : 
 - si implémente filtre : privilégier filtres avec pôles et leurs conjugués pour avoir RI réelle
+
+
+pour améliorer :
+fenêtre de hann : réduit les fréquences parasites (ex pour guitare)
+regarder les notebooks
