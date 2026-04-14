@@ -7,9 +7,15 @@ from scipy.signal import find_peaks,hilbert
 from scipy.signal.windows import hann
 import fichiers_detecte_instrument.detecte_instrument_Julien
 
-SAMPLE_RATE = 44100
-NOM_FICHIER='gamme_guitare_reel_do_majeur.wav'
 
+SAMPLE_RATE = 44100
+NOM_FICHIER='speech.wav'
+
+
+
+
+
+print("nom_fichier", NOM_FICHIER)
 ref_notes=frequences = [
     # octave -1
     [16.35, "do-1"], [17.33, "do#-1"], [18.36, "ré-1"], [19.45, "ré#-1"],
@@ -59,13 +65,17 @@ ref_notes=frequences = [
 
 def trouver_note(freq):
     global ref_notes
-    i=0
-    while not ref_notes[i][0]<=freq<=ref_notes[i+1][0]:
-        i+=1
-    if abs(ref_notes[i][0]-freq)<abs(ref_notes[i+1][0]-freq):
-        return ref_notes[i][1]
+    for i in range(len(ref_notes) - 1):
+        if ref_notes[i][0] <= freq <= ref_notes[i + 1][0]:
+            if abs(ref_notes[i][0] - freq) < abs(ref_notes[i + 1][0] - freq):
+                return ref_notes[i][1]
+            else:
+                return ref_notes[i + 1][1]
+    # Si la fréquence est en dehors de la plage, retourne la note la plus proche
+    if freq < ref_notes[0][0]:
+        return ref_notes[0][1]
     else:
-        return ref_notes[i+1][1]
+        return ref_notes[-1][1]
     
 def print_sans_doublons(liste_notes_fréquences):
     for echantillon in liste_notes_fréquences:
@@ -285,7 +295,7 @@ def trouver_pitchs(signal):
         t = np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft
 
         #on appelle la fonction pour détecter l'instrument
-        fichiers_detecte_instrument.detecte_instrument_Julien.detecte_instrument(np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft,np.abs(Y_STFT[:, closest + pitch_offset]))
+        #fichiers_detecte_instrument.detecte_instrument_Julien.detecte_instrument(np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft,np.abs(Y_STFT[:, closest + pitch_offset]),note/SAMPLE_RATE)
 
         # --- Visualisation du spectre pour cet onset ---
         """plt.axhline(y=max_val * 2 / 3, color='k', linestyle='--', label='seuil 2/3 du max')
