@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import soundfile as sf
 from scipy.signal import find_peaks,hilbert
+from scipy.signal.windows import hann
+import fichiers_detecte_instrument.detecte_instrument_Julien
 
 SAMPLE_RATE = 44100
-NOM_FICHIER='Piano_accord.wav'
+NOM_FICHIER='gamme_guitare_reel_do_majeur.wav'
 
 ref_notes=frequences = [
     # octave -1
@@ -64,6 +66,16 @@ def trouver_note(freq):
         return ref_notes[i][1]
     else:
         return ref_notes[i+1][1]
+    
+def print_sans_doublons(liste_notes_fréquences):
+    for echantillon in liste_notes_fréquences:
+        (pos_temporelle,liste_notes)=echantillon
+        liste_notes_trouvées=[]
+        for note_trouvée in liste_notes:
+            if note_trouvée not in liste_notes_trouvées:
+                liste_notes_trouvées.append(note_trouvée)
+        print(f"position temporelle : {pos_temporelle}, notes trouvées : {liste_notes_trouvées}")
+
 
 # ---------------------------------------------------------------------------
 # Calcul de l'enveloppe d'énergie (filtre IIR du 1er ordre)
@@ -178,7 +190,7 @@ def detect_notes(signal, tresh, cooldown, attack, deriv_order):
                 cd = cooldown  # Déclenche le cooldown pour éviter les doubles détections
 
     # --- Visualisation ---
-    t = np.arange(len(signal)) / SAMPLE_RATE
+    """t = np.arange(len(signal)) / SAMPLE_RATE
     if notes_pos:
         plt.axvline(x=notes_pos[0] / SAMPLE_RATE, color='r', label="onsets détectés")
     for x in notes_pos:
@@ -194,7 +206,7 @@ def detect_notes(signal, tresh, cooldown, attack, deriv_order):
     plt.xlabel("Temps (s)")
     plt.ylabel("Amplitude / niveau normalisé")
     plt.legend()
-    plt.show()
+    plt.show()"""
 
     return notes_pos
 
@@ -240,6 +252,7 @@ def trouver_pitchs(signal):
     # Y_STFT : matrice complexe (fréquences × trames)
     F, T, Y_STFT = sp.signal.stft(signal, fs=SAMPLE_RATE, nperseg=1024, nfft=nfft)
 
+    liste_notes_fréquences=[]
 
     notes_pos = detect_notes(signal, 0.025, SAMPLE_RATE / 10, 0.9995, 400)
 
@@ -271,8 +284,11 @@ def trouver_pitchs(signal):
         # Axe fréquentiel pour l'affichage du spectre complet
         t = np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft
 
+        #on appelle la fonction pour détecter l'instrument
+        fichiers_detecte_instrument.detecte_instrument_Julien.detecte_instrument(np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft,np.abs(Y_STFT[:, closest + pitch_offset]))
+
         # --- Visualisation du spectre pour cet onset ---
-        plt.axhline(y=max_val * 2 / 3, color='k', linestyle='--', label='seuil 2/3 du max')
+        """plt.axhline(y=max_val * 2 / 3, color='k', linestyle='--', label='seuil 2/3 du max')
         plt.plot(t, np.abs(Y_STFT[:, closest + pitch_offset]), label='spectre STFT')      # Spectre en amplitude
         for i, x in enumerate(freqs):
             if i == 0:
@@ -283,9 +299,11 @@ def trouver_pitchs(signal):
         plt.xlabel("Fréquence (Hz)")
         plt.ylabel("Amplitude")
         plt.legend()
-        plt.show()
+        plt.show()"""
 
-        print([f"position temporelle : {note/SAMPLE_RATE}, notes trouvées : {[trouver_note(freq) for freq in freqs]}"])
+
+        liste_notes_fréquences.append((note/SAMPLE_RATE,[trouver_note(freq) for freq in freqs]))
+    return liste_notes_fréquences
 
 def main(file_name):
     try:
@@ -297,18 +315,32 @@ def main(file_name):
         if len(x.shape) == 2:
             x = np.mean(x, axis=1)
 
-        #tracer le signal d'origine
+        #tracer le signal d'origine sans filtre
         t=np.linspace(0,len(x)/Fe,len(x))
         plt.close()
-        plt.title("signal temporel d'origine non échantilloné")
+        plt.title("signal temporel d'origine non échantilloné sans filtre")
         plt.plot(t,x)
         plt.xlabel("temps (s)")
         plt.ylabel("amplitude")
         plt.show()        
 
+        fenêtre_hann=hann(len(x))
+        x*=fenêtre_hann
+        #tracer le signal d'origine avec filtre
+        t=np.linspace(0,len(x)/Fe,len(x))
+        plt.close()
+        plt.title("signal temporel d'origine non échantilloné avec filtre")
+        plt.plot(t,x)
+        plt.xlabel("temps (s)")
+        plt.ylabel("amplitude")
+        plt.show()        
+
+
         #découper le signal en notes et analyser chaque note
+        liste_notes_fréquences=trouver_pitchs(x)
+        #renvoyer le résultat
         print("notes trouvées : ")
-        trouver_pitchs(x)
+        print_sans_doublons(liste_notes_fréquences)
 
 
     except:
