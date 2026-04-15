@@ -14,14 +14,22 @@ def detecte_instrument(frequences,transformee_fourier,position_temps):
     x=np.array([frequences[abs(liste_triee[i][0])] for i in range(len(liste_triee))])#valeur des fréquences
     y=np.array([abs(liste_triee[i][1]) for i in range(len(liste_triee))])#valeur des amplitudes
     #afficher le résultat
-    print("frequences : ", x)
+    """print("frequences : ", x)
     print("amplitudes : ",y)
     plt.close()
     plt.plot(x,y,"x")
     plt.title(f"spectre de la note à la position {position_temps} 5 pics les plus gros")
     plt.xlabel("fréquence en Hz")
     plt.ylabel("amplitude")
-    plt.show()
+    plt.show()"""
+    # déterminer le type d'instrument
+    # on fait un truc pourri mais qui renvoie un résultat
+    if 2/3*y[0]>y[1]:#première fréquence plus forte que les suivantes
+        return "guitare"
+    if 1/5*abs(liste_triee[0][1]) > max(abs(elt) for elt in liste_triee[1:][1]):#fréquence fondamentale bien plus forte que toutes les autres fréquences
+        return "drums"
+    else:
+        return "voice"
 
 
 

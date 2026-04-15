@@ -9,7 +9,7 @@ import fichiers_detecte_instrument.detecte_instrument_Julien
 
 
 SAMPLE_RATE = 44100
-NOM_FICHIER='speech.wav'
+NOM_FICHIER='morceau_reel_drums.wav'
 
 
 
@@ -267,6 +267,7 @@ def trouver_pitchs(signal):
     notes_pos = detect_notes(signal, 0.025, SAMPLE_RATE / 10, 0.9995, 400)
 
     out = []
+    liste_instruments=[]
     for note in notes_pos:
         time = note / SAMPLE_RATE  # Conversion échantillon → secondes
         closest = 0
@@ -295,7 +296,7 @@ def trouver_pitchs(signal):
         t = np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft
 
         #on appelle la fonction pour détecter l'instrument
-        #fichiers_detecte_instrument.detecte_instrument_Julien.detecte_instrument(np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft,np.abs(Y_STFT[:, closest + pitch_offset]),note/SAMPLE_RATE)
+        liste_instruments.append(fichiers_detecte_instrument.detecte_instrument_Julien.detecte_instrument(np.arange(len(np.abs(Y_STFT[:, closest + pitch_offset]))) * SAMPLE_RATE / nfft,np.abs(Y_STFT[:, closest + pitch_offset]),note/SAMPLE_RATE))
 
         # --- Visualisation du spectre pour cet onset ---
         """plt.axhline(y=max_val * 2 / 3, color='k', linestyle='--', label='seuil 2/3 du max')
@@ -313,7 +314,7 @@ def trouver_pitchs(signal):
 
 
         liste_notes_fréquences.append((note/SAMPLE_RATE,[trouver_note(freq) for freq in freqs]))
-    return liste_notes_fréquences
+    return liste_notes_fréquences,liste_instruments
 
 def main(file_name):
     try:
@@ -347,10 +348,11 @@ def main(file_name):
 
 
         #découper le signal en notes et analyser chaque note
-        liste_notes_fréquences=trouver_pitchs(x)
+        liste_notes_fréquences,liste_instruments=trouver_pitchs(x)
         #renvoyer le résultat
         print("notes trouvées : ")
         print_sans_doublons(liste_notes_fréquences)
+        print("liste_instruments = ",liste_instruments)
 
 
     except:
