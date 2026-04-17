@@ -3,6 +3,8 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import time
+from scipy.signal import find_peaks
+import librosa
 SAMPLE_RATE = 44100
 
 def freq_to_note(freq):
@@ -132,9 +134,10 @@ def detecte_note(signal,debut_notes):
     #nnls prend une matrice (nb_notes,nb_freqs) mais là on a (nb_freqs,nb_notes) dc 
     profils_de_note = profils_de_note.T
     taille_signal = len(signal)
+    toutes_notes_a_afficher=[]
     for (debut,fin) in fenetres : 
         signal_tronque=signal[debut:min(fin,taille_signal-1)]
-        window=np.hanning(fin-debut)
+        window=np.hanning(len(signal_tronque))
         signal_tronque*=window
         #rfft c comme fft mais que la moitié car on a la symetrie
         spectre_signal_tronque = np.abs(np.fft.rfft(signal_tronque)) 
@@ -145,43 +148,106 @@ def detecte_note(signal,debut_notes):
         noms_notes_deja_calculee=[]
         notes_a_afficher=[]
         for i,val in enumerate(regression):
-            if val>val_max*0.8 and not (nom_notes_dans_profils[i] in noms_notes_deja_calculee):
+            if val>val_max*0.7 and not (nom_notes_dans_profils[i] in noms_notes_deja_calculee):
                 noms_notes_deja_calculee.append(nom_notes_dans_profils[i])
-                notes_a_afficher.append(f"{nom_notes_dans_profils[i]}{octave_notes_dans_profils[i]}-{round(val,3)}")
+                notes_a_afficher.append(f"{nom_notes_dans_profils[i]}{octave_notes_dans_profils[i]}")
         print(notes_a_afficher)
-        
+        toutes_notes_a_afficher.append(notes_a_afficher)
+    tableau_notes_elargies =[[] for i in range(len(signal))]
 
-#sample, _ = sf.read('dataset_APP2/morceau_reel/guitare_reel.wav')
-sample, _ = sf.read('./love_me_SI101.wav')
-if(sample.ndim==2):
-    sample = sample[::,0] 
+    for i in range(len(debut_notes)):
+        if i+1==len(debut_notes):
+            fin=len(signal) 
+        else :
+            fin=debut_notes[i+1]
+        for j in range(debut_notes[i],fin):
+            tableau_notes_elargies[j]=toutes_notes_a_afficher[i]
+    tableau_notes_elargies=tableau_notes_elargies[:len(signal)]
 
-t = np.arange(len(sample))/SAMPLE_RATE
-mc = methode_complexe(sample)
+    """
+    # decommenter si besoin de plot les notes, ce print a été fait par IA car 
+    #c'est juste un print
+    ordre_chromatique = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    def rang_note(note_str):
+        # note_str est du style "E3-0.123", on extrait juste la note
+        note_str = note_str.split('-')[0]
+        for i in range(len(note_str)-1, 0, -1):
+            if note_str[i].isdigit():
+                return int(note_str[i:]) * 12 + ordre_chromatique.index(note_str[:i])
 
-t_frames = np.linspace(0, 1, len(mc))
-t_samples = np.linspace(0, 1, len(sample))
-detec_upsample = np.interp(t_samples, t_frames,  mc)
+    toutes_les_notes = sorted(
+        {note for notes in tableau_notes_elargies for note in notes},
+        key=rang_note
+    )
+    note_to_y = {note: i for i, note in enumerate(toutes_les_notes)}
 
-print("a")
-plt.plot(t,sample*5, color = 'b')
+    pas = max(1, SAMPLE_RATE // 100)
+    t_axis, y_axis = [], []
+    for n in range(0, len(tableau_notes_elargies), pas):
+        for note in tableau_notes_elargies[n]:
+            t_axis.append(n / SAMPLE_RATE)
+            y_axis.append(note_to_y[note])
 
-print("b")
-plt.plot(t,detec_upsample, color = 'r') 
+    fig, ax = plt.subplots(figsize=(16, 5))
+    ax.scatter(t_axis, y_axis, s=3, color='steelblue')
+    ax.set_yticks(range(len(toutes_les_notes)))
+    ax.set_yticklabels(toutes_les_notes, fontsize=8)
+    ax.set_xlabel("Temps (s)")
+    ax.set_ylabel("Note")
+    ax.set_title("Notes jouées au fil du temps")
+    ax.grid(True, axis='x', linestyle='--', alpha=0.4)
+    plt.tight_layout()
+    plt.show() """
+    return tableau_notes_elargies 
+def detecte_instrument(frequences,transformee_fourier,indices_peaks):
+    #on applique une méthode de recherche de pics
+    couples_indices_amplitude_pics=[(indice,transformee_fourier[indice]) for indice in indices_peaks]
+    #on range la liste coupels_indices_amplitude_pics en ordre décroissant selon les amplitudes     
+    liste_triee = sorted(couples_indices_amplitude_pics, key=lambda x: x[1], reverse=True)
+    liste_triee=liste_triee[:5]#on ne garde que les 5 premiers plus gros pics pour éviter d'avoir trop de bruit et pouvoir quand même reconnaître l'instrument
+    #on récupère les infos pour pouvoir tracer
+    x=np.array([frequences[abs(liste_triee[i][0])] for i in range(len(liste_triee))])#valeur des fréquences
+    y=np.array([abs(liste_triee[i][1]) for i in range(len(liste_triee))])#valeur des amplitudes
+    #afficher le résultat
+    """print("frequences : ", x)
+    print("amplitudes : ",y)
+    plt.close()
+    plt.plot(x,y,"x")
+    plt.title(f"spectre de la note à la position {position_temps} 5 pics les plus gros")
+    plt.xlabel("fréquence en Hz")
+    plt.ylabel("amplitude")
+    plt.show()"""
+    # déterminer le type d'instrument
+    # on fait un truc pourri mais qui renvoie un résultat
+
+    if 1/5*abs(liste_triee[0][1]) > max(abs(elt) for elt in liste_triee[1:][1]):#fréquence fondamentale bien plus forte que toutes les autres fréquences
+        return "drums"
+    return "guitare"
+def analyse(sample,Fe):
+    global SAMPLE_RATE
+    SAMPLE_RATE=Fe 
+    if(sample.ndim==2):
+        sample = sample[::,0] 
+    #0 padding pour eviter les erreurs de dimensions dans la découpe de fenetre
+    sample = np.concatenate([sample,np.zeros(10000)])
+    t = np.arange(len(sample))/SAMPLE_RATE
+    mc = methode_complexe(sample)
+
+    t_frames = np.linspace(0, 1, len(mc))
+    t_samples = np.linspace(0, 1, len(sample))
+    detec_upsample = np.interp(t_samples, t_frames,  mc)
+    tableau_depart_notes =[]
+
+    indices_pics, _ = find_peaks(detec_upsample,prominence =0.02,  distance=SAMPLE_RATE/20 )
+
+    tableau_depart_notes = []
+    for i in indices_pics:
+        tableau_depart_notes.append(i)
 
 
-print("the couuurbbbbe")
-val_max = np.max(detec_upsample)
-print(len(detec_upsample),"notes detectees")
-tableau_depart_notes =[]
-from scipy.signal import find_peaks
-
-indices_pics, _ = find_peaks(detec_upsample,height=val_max * 0.2,  distance=SAMPLE_RATE/10 )
-
-tableau_depart_notes = []
-for i in indices_pics:
-    plt.axvline(x=t[i], color='green', linewidth=1)
-    tableau_depart_notes.append(i)
-print(len(tableau_depart_notes),"notes")
-plt.show()
-detecte_note(sample,tableau_depart_notes)
+    tableau_notes = detecte_note(sample,tableau_depart_notes)
+    instrument = detecte_instrument(np.fft.fftfreq(len(sample),d=1/Fe),np.fft.fft(sample),indices_pics)
+    return tableau_notes,instrument 
+if __name__=="__main__":
+    sample,f=sf.read("gamme__guitare.wav")
+    print(analyse(sample,f))
